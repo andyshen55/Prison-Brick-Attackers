@@ -4,7 +4,7 @@
 # educational purposes provided that (1) you do not distribute or publish
 # solutions, (2) you retain this notice, and (3) you provide clear
 # attribution to UC Berkeley, including a link to http://ai.berkeley.edu.
-# 
+#
 # Attribution Information: The Pacman AI projects were developed at UC Berkeley.
 # The core projects and autograders were primarily created by John DeNero
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
@@ -48,10 +48,28 @@ def createTeam(firstIndex, secondIndex, isRed,
 ##########
 
 class OffensiveAgent(ReflexCaptureAgent):
+  def registerInitialState(self, gameState):
+    self.start = gameState.getAgentPosition(self.index)
+    CaptureAgent.registerInitialState(self, gameState)
+    #middlePoints
+    self.middleLine = []
+    walls = gameState.getWalls()
+    middleX = walls.width // 2
+    #print(middleX)
+    if( not self.red):
+      middleX+=1
+    y = 0
+    while(y < walls.height):
+      #print(y)
+      if(not gameState.hasWall(middleX, y)):
+        tpl = (middleX, y)
+        self.middleLine.append(tpl)
+      y += 1
+
   def getFeatures(self, gameState, action):
     # score differential as feature
     features = util.Counter()
-    successor = self.getSuccessor(gameState, action)  
+    successor = self.getSuccessor(gameState, action)
     features['score'] = self.getScore(successor) - self.getScore(gameState)
 
     agent = successor.getAgentState(self.index)
@@ -63,13 +81,13 @@ class OffensiveAgent(ReflexCaptureAgent):
     capsules = self.getCapsules(gameState)
     opponents = [gameState.getAgentState(agentIndex) for agentIndex in self.getOpponents(gameState)]
     defenders = [agent for agent in opponents if not agent.isPacman and agent.getPosition() != None]
-    
+
     # Compute distance to the nearest food
     if len(foodList): # This should always be True,  but better safe than sorry
       minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
       features['closestFood'] = minDistance
     features['foodRemaining'] = len(foodList)
-    
+
     # Compute distance to nearest defender, same check in case defender just died
     if len(defenders):
       numAdjacent = 0
@@ -85,15 +103,11 @@ class OffensiveAgent(ReflexCaptureAgent):
       features['nearestCapsule'] = nearestCapsule
     else:
       features['nearestCapsule'] = -1
-    
+
     # get distance to own territory (safe)
-    redMidline = [(15,1), (15,2), (15,4), (15,5), (15,7), (15,8), (15,11), (15,12), (15,13), (15,14)]
-    blueMidline =  [(16,1), (16,2), (16,3), (16,4), (16,7), (16,8), (16,10), (16,11), (16,13), (16,14)]   
-    if self.red:
-      distanceFromMidline = min([self.getMazeDistance(myPos, square) for square in redMidline])
-    else:
-      distanceFromMidline = min([self.getMazeDistance(myPos, square) for square in blueMidline])
-    
+    midLine = self.middleLine
+    distanceFromMidline = min([self.getMazeDistance(myPos, square) for square in self.middleLine])
+
     features['distanceFromMidline'] = distanceFromMidline
     features['stop'] = (action == 'Stop')
 
@@ -116,7 +130,7 @@ class OffensiveAgent(ReflexCaptureAgent):
   def evaluate(self, gameState, action):
     features = self.getFeatures(gameState, action)
     weights = self.getWeights(gameState, action)
-    score = features * weights 
+    score = features * weights
 
     # if features['distanceFromMidline'] < 5:
     #   print(features)
